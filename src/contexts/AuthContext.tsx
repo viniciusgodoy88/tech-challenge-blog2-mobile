@@ -28,6 +28,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const storedUser = await AsyncStorage.getItem('@blog_user');
 
         if (storedToken && storedUser) {
+          // Injeta o token nas requisições do Axios caso o app seja reaberto
+          api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
           setUser(JSON.parse(storedUser));
         }
       } catch (error) {
@@ -41,10 +43,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signIn = async ({ email, pass }: Credentials) => {
     try {
-      // Envia tanto 'pass' quanto 'password' para garantir compatibilidade com o backend
-      const response = await api.post('/login', { email, pass, password: pass });
+      // Ajustado para a rota /auth/login e enviando 'password' exigido pela API
+      const response = await api.post('/auth/login', { 
+        email, 
+        password: pass 
+      });
       
-      // Mapeia flexivelmente caso a API retorne { token, user } ou { accessToken, professor }
+      // Mapeamento dinâmico da resposta da API
       const token = response.data?.token || response.data?.accessToken;
       const userData = response.data?.user || response.data?.professor || response.data?.data || { email };
 
@@ -52,20 +57,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('A API não retornou um token de autenticação válido.');
       }
 
+      // Configura o cabeçalho global do Axios para requisições autenticadas subsequentes
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+      // Salva token e usuário no AsyncStorage
       await AsyncStorage.setItem('@blog_token', token);
       await AsyncStorage.setItem('@blog_user', JSON.stringify(userData));
 
       setUser(userData);
     } catch (error: any) {
-      console.error('Erro de Autenticação:', error.response?.data || error.message);
+      console.error('Erro na chamada de login:', error.response?.data || error.message);
       throw error;
     }
   };
 
   const signOut = async () => {
-    await AsyncStorage.removeItem('@blog_token');
-    await AsyncStorage.removeItem('@blog_user');
-    setUser(null);
+    try {
+      await AsyncStorage.removeItem('@blog_token');
+      await AsyncStorage.removeItem('@blog_user');
+      delete api.defaults.headers.common['Authorization'];
+      setUser(null);
+    } catch (error) {
+      console.error('Erro ao realizar logout:', error);
+    }
   };
 
   return (

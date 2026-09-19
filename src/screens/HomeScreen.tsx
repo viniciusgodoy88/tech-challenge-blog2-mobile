@@ -23,8 +23,14 @@ export default function HomeScreen({ navigation }: any) {
         : response.data?.posts || response.data?.data || [];
 
       setPosts(listData);
-    } catch (error) {
-      console.log('Erro de conexão com o backend:', error);
+    } catch (error: any) {
+      // Log detalhado para identificar o motivo exato de falha na conexão
+      console.log('--- ERRO DE CONEXÃO API ---');
+      console.log('Status HTTP:', error.response?.status);
+      console.log('Dados do Erro:', error.response?.data || error.message);
+      console.log('URL chamada:', (api.defaults.baseURL || '') + '/posts');
+      console.log('---------------------------');
+
       setPosts([]);
     } finally {
       setLoading(false);
@@ -74,7 +80,9 @@ export default function HomeScreen({ navigation }: any) {
         ) : filteredPosts.length === 0 ? (
           <View style={styles.centerBox}>
             <Text style={styles.emptyTitle}>Nenhum post encontrado</Text>
-            <Text style={styles.emptySub}>Verifique se o seu servidor backend está ativo em http://192.168.15.152:3000</Text>
+            <Text style={styles.emptySub}>
+              Verifique a conexão com o servidor em {api.defaults.baseURL || 'nosso serviço de API'}
+            </Text>
             <TouchableOpacity style={styles.reloadBtn} onPress={loadPosts}>
               <Text style={styles.reloadBtnText}>🔄 Tentar Novamente</Text>
             </TouchableOpacity>

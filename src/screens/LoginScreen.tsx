@@ -16,22 +16,31 @@ export default function LoginScreen({ navigation }: any) {
 
     try {
       setLoading(true);
-      await signIn({ email: email.trim(), pass: pass.trim() });
-      
-      // Ao autenticar com sucesso, direciona ao painel administrativo
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'AdminPosts' }],
+
+      // Envia os dados para a função de autenticação do AuthContext
+      await signIn({ 
+        email: email.trim(), 
+        pass: pass.trim()
       });
+      
+      // A transição de tela ocorre automaticamente via AuthContext (troca do estado 'signed').
+      // O 'navigation.reset' foi removido para evitar o erro 'RESET was not handled by any navigator'.
     } catch (error: any) {
-      console.log('Erro ao efetuar login:', error);
+      // Logs de depuração no terminal do VS Code
+      console.log('--- ERRO DE AUTENTICAÇÃO ---');
+      console.log('Status HTTP:', error.response?.status);
+      console.log('Corpo da Resposta:', error.response?.data);
+      console.log('Mensagem:', error.message);
+      console.log('----------------------------');
       
       let mensagem = 'Não foi possível conectar ao servidor de autenticação.';
       
       if (error.response?.data?.message) {
         mensagem = error.response.data.message;
+      } else if (error.response?.data?.error) {
+        mensagem = error.response.data.error;
       } else if (error.code === 'ECONNABORTED' || error.message?.includes('Network Error')) {
-        mensagem = 'Falha de rede ou timeout. Verifique se a API backend está em execução e se o IP do serviço está correto.';
+        mensagem = 'Falha de rede ou timeout. Verifique a conexão com o servidor backend.';
       }
 
       Alert.alert('Erro de Login', mensagem);
