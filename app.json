@@ -1,24 +1,18 @@
 {
   "expo": {
-    "name": "tech-challenge-blog2-mobile",
+    "name": "Tech Blog Mobile",
     "slug": "tech-challenge-blog2-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "ios": {
-      "supportsTablet": true
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#4f46e5"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundColor": "#4f46e5"
       }
-    },
-    "web": {
-      "favicon": "./assets/favicon.png"
     }
   }
 }
