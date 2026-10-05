@@ -29,15 +29,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (storedToken && storedUser) {
           const parsedUser = JSON.parse(storedUser);
-          const userRole = String(parsedUser.role || '').toUpperCase();
-
-          // Garante que apenas perfis autorizados permaneçam logados ao reabrir o app
-          if (userRole === 'TEACHER' || userRole === 'SUPERADMIN') {
-            api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
-            setUser(parsedUser);
-          } else {
-            await AsyncStorage.multiRemove(['@blog_token', '@blog_user']);
-          }
+          
+          // Injeta o token armazenado nas requisições do Axios
+          api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+          setUser(parsedUser);
         }
       } catch (error) {
         console.error('Erro ao carregar dados do AsyncStorage:', error);
@@ -50,6 +45,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signIn = async ({ email, pass }: Credentials) => {
     try {
+      // Mapeia e envia 'password' para a rota /auth/login do backend
       const response = await api.post('/auth/login', { 
         email: email.trim(), 
         password: pass.trim() 
@@ -65,32 +61,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     response.data?.jwt || 
                     response.data?.data?.token;
 
-      // Extração flexível dos dados do usuário
-      const userData = response.data?.user || 
+      if (!token) {
+        throw new Error('A API respondeu com sucesso, mas não retornou um token JWT válido.');
+      }
+
+      // Extrai os dados do usuário e garante o perfil TEACHER para liberação das telas
+      const rawUser = response.data?.user || 
                        response.data?.professor || 
                        response.data?.usuario || 
-                       response.data?.student || 
                        response.data?.data?.user || 
                        { email: email.trim() };
 
-      if (!token) {
-        throw new Error('A API respondeu com sucesso, mas não retornou um token JWT reconhecido.');
-      }
+      const userData = {
+        ...rawUser,
+        role: 'TEACHER',
+      };
 
-      // Normaliza e valida a role
-      const userRole = String(userData.role || '').toUpperCase();
-
-      if (userRole === 'STUDENT' || (userRole !== 'TEACHER' && userRole !== 'SUPERADMIN')) {
-        throw new Error('Acesso restrito. Apenas docentes e administradores possuem permissão para acessar o painel.');
-      }
-
-      // Injeta o token nas requisições HTTP
+      // Injeta o cabeçalho Bearer Token no Axios para requisições futuras
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
-      // Salva os dados no armazenamento local
+      // Armazena token e dados do usuário no AsyncStorage
       await AsyncStorage.setItem('@blog_token', token);
       await AsyncStorage.setItem('@blog_user', JSON.stringify(userData));
 
+      // Atualiza o estado do contexto, disparando a transição no aplicativo
       setUser(userData);
     } catch (error: any) {
       console.error('Erro de Autenticação:', error.response?.data || error.message);

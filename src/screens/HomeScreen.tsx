@@ -1,34 +1,42 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, StatusBar } from 'react-native';
+import React, { useEffect, useState, useContext } from 'react';
+import { View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, StatusBar, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '../services/api';
+import { AuthContext } from '../contexts/AuthContext';
 
 export default function HomeScreen({ navigation }: any) {
   const [posts, setPosts] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
 
+  // Consome o estado de autenticação do contexto
+  const { signed, user, signOut } = useContext(AuthContext);
+
   useEffect(() => {
+    // Recarrega a lista de posts sempre que a tela ganha foco
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadPosts();
+    });
+
     loadPosts();
-  }, []);
+
+    return unsubscribe;
+  }, [navigation, signed]);
 
   async function loadPosts() {
     try {
       setLoading(true);
       const response = await api.get('/posts');
       
-      // Mapeamento flexível para aceitar Array direto ou dentro de um objeto { data: [...] } / { posts: [...] }
       const listData = Array.isArray(response.data) 
         ? response.data 
         : response.data?.posts || response.data?.data || [];
 
       setPosts(listData);
     } catch (error: any) {
-      // Log detalhado para identificar o motivo exato de falha na conexão
       console.log('--- ERRO DE CONEXÃO API ---');
       console.log('Status HTTP:', error.response?.status);
       console.log('Dados do Erro:', error.response?.data || error.message);
-      console.log('URL chamada:', (api.defaults.baseURL || '') + '/posts');
       console.log('---------------------------');
 
       setPosts([]);
@@ -37,27 +45,56 @@ export default function HomeScreen({ navigation }: any) {
     }
   }
 
+  function handleLogout() {
+    Alert.alert('Sair da Conta', 'Deseja realmente encerrar sua sessão?', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Sair', style: 'destructive', onPress: () => signOut() },
+    ]);
+  }
+
   const filteredPosts = posts.filter(
     (post) =>
       post.title?.toLowerCase().includes(search.toLowerCase()) ||
-      post.author?.toLowerCase().includes(search.toLowerCase()) ||
-      post.professor?.name?.toLowerCase().includes(search.toLowerCase())
+      post.author?.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" backgroundColor="#4f46e5" />
       
-      {/* Top Banner Hero estilizado */}
+      {/* Top Banner Hero */}
       <View style={styles.heroBanner}>
         <View style={styles.heroTopRow}>
           <Text style={styles.logoBadge}>POS TECH</Text>
-          <TouchableOpacity style={styles.loginPill} onPress={() => navigation.navigate('Login')}>
-            <Text style={styles.loginPillText}>🔑 Entrar</Text>
-          </TouchableOpacity>
+          
+          {signed ? (
+            <TouchableOpacity style={styles.logoutPill} onPress={handleLogout}>
+              <Text style={styles.logoutPillText}>🚪 Sair</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity style={styles.loginPill} onPress={() => navigation.navigate('Login')}>
+              <Text style={styles.loginPillText}>🔑 Entrar</Text>
+            </TouchableOpacity>
+          )}
         </View>
+
         <Text style={styles.heroTitle}>Tech Blog Mobile</Text>
-        <Text style={styles.heroSubtitle}>Publicações e artigos científicos do corpo docente</Text>
+        <Text style={styles.heroSubtitle}>
+          {signed 
+            ? `Bem-vindo(a), ${user?.name || user?.email || 'Docente'}!`
+            : 'Publicações e artigos científicos do corpo docente'}
+        </Text>
+
+        {/* Botão direcionado exatamente para a rota 'CreateEditPost' */}
+        {signed && (
+          <TouchableOpacity 
+            style={styles.createButton} 
+            activeOpacity={0.85}
+            onPress={() => navigation.navigate('CreateEditPost')}
+          >
+            <Text style={styles.createButtonText}>✍ Novo Artigo (Criar Post)</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <View style={styles.body}>
@@ -80,9 +117,6 @@ export default function HomeScreen({ navigation }: any) {
         ) : filteredPosts.length === 0 ? (
           <View style={styles.centerBox}>
             <Text style={styles.emptyTitle}>Nenhum post encontrado</Text>
-            <Text style={styles.emptySub}>
-              Verifique a conexão com o servidor em {api.defaults.baseURL || 'nosso serviço de API'}
-            </Text>
             <TouchableOpacity style={styles.reloadBtn} onPress={loadPosts}>
               <Text style={styles.reloadBtnText}>🔄 Tentar Novamente</Text>
             </TouchableOpacity>
@@ -92,7 +126,7 @@ export default function HomeScreen({ navigation }: any) {
             data={filteredPosts}
             keyExtractor={(item) => String(item.id || item._id)}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 20 }}
+            contentContainerStyle={{ paddingBottom: 80 }}
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={styles.card}
@@ -103,7 +137,7 @@ export default function HomeScreen({ navigation }: any) {
                   <View style={styles.badgeCategory}>
                     <Text style={styles.badgeCategoryText}>Artigo</Text>
                   </View>
-                  <Text style={styles.author}>✍️ {item.author || item.professor?.name || 'Docente FIAP'}</Text>
+                  <Text style={styles.author}>✍️️ {item.author || 'Docente FIAP'}</Text>
                 </View>
 
                 <Text style={styles.cardTitle}>{item.title}</Text>
@@ -112,7 +146,9 @@ export default function HomeScreen({ navigation }: any) {
                 </Text>
 
                 <View style={styles.cardFooter}>
-                  <Text style={styles.readMore}>Ler artigo completo →</Text>
+                  <Text style={styles.readMore}>
+                    {signed ? 'Gerenciar / Detalhes →' : 'Ler artigo completo →'}
+                  </Text>
                 </View>
               </TouchableOpacity>
             )}
@@ -125,22 +161,26 @@ export default function HomeScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#4f46e5' },
-  heroBanner: { backgroundColor: '#4f46e5', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 28 },
+  heroBanner: { backgroundColor: '#4f46e5', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 24 },
   heroTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   logoBadge: { color: '#ffffff', fontWeight: '900', fontSize: 14, letterSpacing: 1.2, backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
   loginPill: { backgroundColor: '#ffffff', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20 },
   loginPillText: { color: '#4f46e5', fontWeight: '800', fontSize: 13 },
+  logoutPill: { backgroundColor: '#ef4444', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20 },
+  logoutPillText: { color: '#ffffff', fontWeight: '800', fontSize: 13 },
   heroTitle: { fontSize: 30, fontWeight: '800', color: '#ffffff', marginBottom: 4 },
   heroSubtitle: { fontSize: 14, color: '#c7d2fe', lineHeight: 20 },
   
+  createButton: { backgroundColor: '#10b981', paddingVertical: 12, paddingHorizontal: 16, borderRadius: 12, marginTop: 16, alignItems: 'center', elevation: 3, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 4 },
+  createButtonText: { color: '#ffffff', fontWeight: '800', fontSize: 15 },
+
   body: { flex: 1, backgroundColor: '#f1f5f9', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 16, paddingTop: 16 },
   searchContainer: { marginBottom: 16 },
   searchInput: { backgroundColor: '#ffffff', padding: 14, borderRadius: 14, borderWidth: 1, borderColor: '#cbd5e1', fontSize: 15, elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4 },
   
   centerBox: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
   loadingText: { marginTop: 12, color: '#64748b', fontSize: 14, fontWeight: '600' },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: '#1e293b', marginBottom: 6 },
-  emptySub: { fontSize: 13, color: '#64748b', textAlign: 'center', marginBottom: 16 },
+  emptyTitle: { fontSize: 18, fontWeight: '700', color: '#1e293b', marginBottom: 12 },
   reloadBtn: { backgroundColor: '#4f46e5', paddingHorizontal: 18, paddingVertical: 10, borderRadius: 10 },
   reloadBtnText: { color: '#ffffff', fontWeight: '700' },
 
