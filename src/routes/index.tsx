@@ -26,7 +26,7 @@ export default function Routes() {
           headerStyle: { backgroundColor: '#4f46e5' },
           headerTintColor: '#ffffff',
           headerTitleStyle: { fontWeight: 'bold' },
-          headerBackTitleVisible: false,
+          headerBackTitle: '', // Oculta o texto do botão de voltar no iOS sem quebrar as tipagens do Native Stack
         }}
       >
         <Stack.Screen 
