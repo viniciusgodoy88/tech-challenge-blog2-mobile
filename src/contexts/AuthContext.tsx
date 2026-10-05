@@ -28,9 +28,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const storedUser = await AsyncStorage.getItem('@blog_user');
 
         if (storedToken && storedUser) {
-          // Injeta o token nas requisições do Axios caso o app seja reaberto
-          api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
-          setUser(JSON.parse(storedUser));
+          const parsedUser = JSON.parse(storedUser);
+          const userRole = String(parsedUser.role || '').toUpperCase();
+
+          // Garante que apenas perfis autorizados permaneçam logados ao reabrir o app
+          if (userRole === 'TEACHER' || userRole === 'SUPERADMIN') {
+            api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+            setUser(parsedUser);
+          } else {
+            await AsyncStorage.multiRemove(['@blog_token', '@blog_user']);
+          }
         }
       } catch (error) {
         console.error('Erro ao carregar dados do AsyncStorage:', error);
@@ -43,30 +50,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signIn = async ({ email, pass }: Credentials) => {
     try {
-      // Ajustado para a rota /auth/login e enviando 'password' exigido pela API
       const response = await api.post('/auth/login', { 
-        email, 
-        password: pass 
+        email: email.trim(), 
+        password: pass.trim() 
       });
-      
-      // Mapeamento dinâmico da resposta da API
-      const token = response.data?.token || response.data?.accessToken;
-      const userData = response.data?.user || response.data?.professor || response.data?.data || { email };
+
+      console.log('=== RESPOSTA DO BACKEND /AUTH/LOGIN ===');
+      console.log(JSON.stringify(response.data, null, 2));
+      console.log('=======================================');
+
+      // Extração flexível do token JWT
+      const token = response.data?.token || 
+                    response.data?.accessToken || 
+                    response.data?.jwt || 
+                    response.data?.data?.token;
+
+      // Extração flexível dos dados do usuário
+      const userData = response.data?.user || 
+                       response.data?.professor || 
+                       response.data?.usuario || 
+                       response.data?.student || 
+                       response.data?.data?.user || 
+                       { email: email.trim() };
 
       if (!token) {
-        throw new Error('A API não retornou um token de autenticação válido.');
+        throw new Error('A API respondeu com sucesso, mas não retornou um token JWT reconhecido.');
       }
 
-      // Configura o cabeçalho global do Axios para requisições autenticadas subsequentes
+      // Normaliza e valida a role
+      const userRole = String(userData.role || '').toUpperCase();
+
+      if (userRole === 'STUDENT' || (userRole !== 'TEACHER' && userRole !== 'SUPERADMIN')) {
+        throw new Error('Acesso restrito. Apenas docentes e administradores possuem permissão para acessar o painel.');
+      }
+
+      // Injeta o token nas requisições HTTP
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
-      // Salva token e usuário no AsyncStorage
+      // Salva os dados no armazenamento local
       await AsyncStorage.setItem('@blog_token', token);
       await AsyncStorage.setItem('@blog_user', JSON.stringify(userData));
 
       setUser(userData);
     } catch (error: any) {
-      console.error('Erro na chamada de login:', error.response?.data || error.message);
+      console.error('Erro de Autenticação:', error.response?.data || error.message);
       throw error;
     }
   };

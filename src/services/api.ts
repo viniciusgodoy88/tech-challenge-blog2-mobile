@@ -6,15 +6,22 @@ export const api = axios.create({
   baseURL: 'https://unlovely-grill-overprice.ngrok-free.dev',
   timeout: 10000,
   headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
     // Ignora a tela de aviso HTML inicial do ngrok para retornar diretamente o JSON
     'ngrok-skip-browser-warning': 'true',
   },
 });
 
-api.interceptors.request.use(async (config) => {
-  const token = await AsyncStorage.getItem('@blog_token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+api.interceptors.request.use(
+  async (config) => {
+    const token = await AsyncStorage.getItem('@blog_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
   }
-  return config;
-});
+);
