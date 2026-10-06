@@ -1,52 +1,65 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { api } from '../services/api';
+import { View, TextInput, Button, StyleSheet, Alert, Text } from 'react-native';
+import { createProfessor, updateProfessor } from '../services/api';
 
-export default function CreateEditProfessorScreen({ route, navigation }: any) {
-  const id = route.params?.id;
-  const [name, setName] = useState('');
+export const CreateEditProfessorScreen = ({ route, navigation }: any) => {
+  const professor = route.params?.professor;
+  const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
 
   useEffect(() => {
-    if (id) {
-      api.get(`/professores/${id}`).then((res) => {
-        setName(res.data.name);
-        setEmail(res.data.email);
-      });
+    if (professor) {
+      setNome(professor.nome);
+      setEmail(professor.email);
     }
-  }, [id]);
+  }, [professor]);
 
-  async function handleSave() {
+  const handleSave = async () => {
+    if (!nome || !email) {
+      Alert.alert('Atenção', 'Preencha todos os campos.');
+      return;
+    }
+
     try {
-      if (id) {
-        await api.put(`/professores/${id}`, { name, email });
+      if (professor) {
+        await updateProfessor(professor.id, { nome, email });
+        Alert.alert('Sucesso', 'Professor atualizado com sucesso.');
       } else {
-        await api.post('/professores', { name, email });
+        await createProfessor({ nome, email });
+        Alert.alert('Sucesso', 'Professor cadastrado com sucesso.');
       }
-      Alert.alert('Sucesso', 'Professor salvo com sucesso!');
       navigation.goBack();
     } catch (error) {
       Alert.alert('Erro', 'Ocorreu um erro ao salvar o registro.');
     }
-  }
+  };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>Nome</Text>
-      <TextInput style={styles.input} value={name} onChangeText={setName} />
-      <Text style={styles.label}>E-mail</Text>
-      <TextInput style={styles.input} value={email} onChangeText={setEmail} autoCapitalize="none" />
-      <TouchableOpacity style={styles.button} onPress={handleSave}>
-        <Text style={styles.buttonText}>Salvar</Text>
-      </TouchableOpacity>
+      <Text style={styles.label}>{professor ? 'Editar Professor' : 'Novo Professor'}</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Nome Completo"
+        value={nome}
+        onChangeText={setNome}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="E-mail"
+        value={email}
+        onChangeText={setEmail}
+        keyboardType="email-address"
+        autoCapitalize="none"
+      />
+      <Button title="Salvar" onPress={handleSave} />
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16 },
-  label: { fontWeight: 'bold', marginBottom: 4 },
-  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 6, padding: 8, marginBottom: 12 },
-  button: { backgroundColor: '#28a745', padding: 12, borderRadius: 6, alignItems: 'center' },
-  buttonText: { color: '#fff', fontWeight: 'bold' },
+  label: { fontSize: 20, fontWeight: 'bold', marginBottom: 16 },
+  input: { borderBottomWidth: 1, borderColor: '#ccc', marginBottom: 16, padding: 8 },
 });
+
+export default CreateEditProfessorScreen;

@@ -29,8 +29,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (storedToken && storedUser) {
           const parsedUser = JSON.parse(storedUser);
-          
-          // Injeta o token armazenado nas requisições do Axios
           api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
           setUser(parsedUser);
         }
@@ -45,7 +43,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signIn = async ({ email, pass }: Credentials) => {
     try {
-      // Mapeia e envia 'password' para a rota /auth/login do backend
       const response = await api.post('/auth/login', { 
         email: email.trim(), 
         password: pass.trim() 
@@ -55,7 +52,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log(JSON.stringify(response.data, null, 2));
       console.log('=======================================');
 
-      // Extração flexível do token JWT
       const token = response.data?.token || 
                     response.data?.accessToken || 
                     response.data?.jwt || 
@@ -65,26 +61,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('A API respondeu com sucesso, mas não retornou um token JWT válido.');
       }
 
-      // Extrai os dados do usuário e garante o perfil TEACHER para liberação das telas
       const rawUser = response.data?.user || 
-                       response.data?.professor || 
-                       response.data?.usuario || 
-                       response.data?.data?.user || 
-                       { email: email.trim() };
+                      response.data?.professor || 
+                      response.data?.usuario || 
+                      response.data?.data?.user || 
+                      { email: email.trim() };
 
       const userData = {
         ...rawUser,
-        role: 'TEACHER',
+        role: rawUser.role || 'TEACHER',
       };
 
-      // Injeta o cabeçalho Bearer Token no Axios para requisições futuras
+      // Configura o cabeçalho no Axios
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
-      // Armazena token e dados do usuário no AsyncStorage
+      // Salva a sessão no AsyncStorage
       await AsyncStorage.setItem('@blog_token', token);
       await AsyncStorage.setItem('@blog_user', JSON.stringify(userData));
 
-      // Atualiza o estado do contexto, disparando a transição no aplicativo
+      // Atualiza o estado
       setUser(userData);
     } catch (error: any) {
       console.error('Erro de Autenticação:', error.response?.data || error.message);

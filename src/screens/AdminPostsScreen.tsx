@@ -8,12 +8,37 @@ export default function AdminPostsScreen({ navigation }: any) {
   const { signOut } = useContext(AuthContext);
 
   useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadPosts();
+    });
+
     loadPosts();
-  }, []);
+
+    return unsubscribe;
+  }, [navigation]);
 
   async function loadPosts() {
-    const response = await api.get('/posts');
-    setPosts(response.data);
+    try {
+      const response = await api.get('/posts');
+      const listData = Array.isArray(response.data) 
+        ? response.data 
+        : response.data?.posts || response.data?.data || [];
+      setPosts(listData);
+    } catch (error) {
+      console.log('Erro ao carregar posts no admin:', error);
+      setPosts([]);
+    }
+  }
+
+  function confirmDelete(id: number) {
+    Alert.alert(
+      'Confirmar Exclusão',
+      'Deseja realmente remover esta publicação?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Excluir', style: 'destructive', onPress: () => handleDelete(id) },
+      ]
+    );
   }
 
   async function handleDelete(id: number) {
@@ -45,20 +70,20 @@ export default function AdminPostsScreen({ navigation }: any) {
 
       <FlatList
         data={posts}
-        keyExtractor={(item) => String(item.id)}
+        keyExtractor={(item) => String(item.id || item._id)}
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
           <View style={styles.itemCard}>
             <View style={{ flex: 1 }}>
               <Text style={styles.itemTitle}>{item.title}</Text>
-              <Text style={styles.itemAuthor}>Autor: {item.author}</Text>
+              <Text style={styles.itemAuthor}>Autor: {item.author || 'Docente FIAP'}</Text>
             </View>
 
             <View style={styles.actionButtons}>
-              <TouchableOpacity style={styles.editBtn} onPress={() => navigation.navigate('CreateEditPost', { id: item.id })}>
+              <TouchableOpacity style={styles.editBtn} onPress={() => navigation.navigate('CreateEditPost', { id: item.id || item._id })}>
                 <Text style={styles.actionText}>Editar</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(item.id)}>
+              <TouchableOpacity style={styles.deleteBtn} onPress={() => confirmDelete(item.id || item._id)}>
                 <Text style={styles.actionTextDelete}>Excluir</Text>
               </TouchableOpacity>
             </View>

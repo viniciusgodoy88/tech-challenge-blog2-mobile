@@ -13,7 +13,6 @@ export default function HomeScreen({ navigation }: any) {
   const { signed, user, signOut } = useContext(AuthContext);
 
   useEffect(() => {
-    // Recarrega a lista de posts sempre que a tela ganha foco
     const unsubscribe = navigation.addListener('focus', () => {
       loadPosts();
     });
@@ -85,15 +84,33 @@ export default function HomeScreen({ navigation }: any) {
             : 'Publicações e artigos científicos do corpo docente'}
         </Text>
 
-        {/* Botão direcionado exatamente para a rota 'CreateEditPost' */}
+        {/* Botões do Painel Administrativo quando Logado */}
         {signed && (
-          <TouchableOpacity 
-            style={styles.createButton} 
-            activeOpacity={0.85}
-            onPress={() => navigation.navigate('CreateEditPost')}
-          >
-            <Text style={styles.createButtonText}>✍ Novo Artigo (Criar Post)</Text>
-          </TouchableOpacity>
+          <View style={styles.adminActionGroup}>
+            <TouchableOpacity 
+              style={styles.createButton} 
+              activeOpacity={0.85}
+              onPress={() => navigation.navigate('CreateEditPost')}
+            >
+              <Text style={styles.createButtonText}>✍ Novo Artigo (Criar Post)</Text>
+            </TouchableOpacity>
+
+            <View style={styles.managementRow}>
+              <TouchableOpacity 
+                style={styles.manageBtn} 
+                onPress={() => navigation.navigate('ListProfessors')}
+              >
+                <Text style={styles.manageBtnText}>👨‍🏫 Gerenciar Docentes</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.manageBtn} 
+                onPress={() => navigation.navigate('ListStudents')}
+              >
+                <Text style={styles.manageBtnText}>👨‍🎓 Gerenciar Estudantes</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         )}
       </View>
 
@@ -137,7 +154,7 @@ export default function HomeScreen({ navigation }: any) {
                   <View style={styles.badgeCategory}>
                     <Text style={styles.badgeCategoryText}>Artigo</Text>
                   </View>
-                  <Text style={styles.author}>✍️️ {item.author || 'Docente FIAP'}</Text>
+                  <Text style={styles.author}>✍ {item.author || 'Docente FIAP'}</Text>
                 </View>
 
                 <Text style={styles.cardTitle}>{item.title}</Text>
@@ -161,18 +178,23 @@ export default function HomeScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#4f46e5' },
-  heroBanner: { backgroundColor: '#4f46e5', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 24 },
+  heroBanner: { backgroundColor: '#4f46e5', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 20 },
   heroTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   logoBadge: { color: '#ffffff', fontWeight: '900', fontSize: 14, letterSpacing: 1.2, backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
   loginPill: { backgroundColor: '#ffffff', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20 },
   loginPillText: { color: '#4f46e5', fontWeight: '800', fontSize: 13 },
   logoutPill: { backgroundColor: '#ef4444', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20 },
   logoutPillText: { color: '#ffffff', fontWeight: '800', fontSize: 13 },
-  heroTitle: { fontSize: 30, fontWeight: '800', color: '#ffffff', marginBottom: 4 },
+  heroTitle: { fontSize: 28, fontWeight: '800', color: '#ffffff', marginBottom: 4 },
   heroSubtitle: { fontSize: 14, color: '#c7d2fe', lineHeight: 20 },
   
-  createButton: { backgroundColor: '#10b981', paddingVertical: 12, paddingHorizontal: 16, borderRadius: 12, marginTop: 16, alignItems: 'center', elevation: 3, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 4 },
+  adminActionGroup: { marginTop: 16 },
+  createButton: { backgroundColor: '#10b981', paddingVertical: 12, paddingHorizontal: 16, borderRadius: 12, alignItems: 'center', elevation: 3, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 4 },
   createButtonText: { color: '#ffffff', fontWeight: '800', fontSize: 15 },
+  
+  managementRow: { flexDirection: 'row', gap: 10, marginTop: 10 },
+  manageBtn: { flex: 1, backgroundColor: 'rgba(255, 255, 255, 0.2)', paddingVertical: 10, borderRadius: 10, alignItems: 'center' },
+  manageBtnText: { color: '#ffffff', fontWeight: '700', fontSize: 12 },
 
   body: { flex: 1, backgroundColor: '#f1f5f9', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 16, paddingTop: 16 },
   searchContainer: { marginBottom: 16 },
