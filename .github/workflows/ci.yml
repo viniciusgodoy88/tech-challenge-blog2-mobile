@@ -17,11 +17,11 @@ jobs:
       - name: 🟢 Configurar Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
           cache: "npm"
 
       - name: 📦 Instalar Dependências
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
       - name: 🔍 Checagem de Tipos TypeScript
         run: npx tsc --noEmit
